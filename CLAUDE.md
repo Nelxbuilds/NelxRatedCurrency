@@ -7,35 +7,49 @@ WoW addon. Interface: 120001 (Midnight Season 1). Author: Nelxbuilds.
 Track all PvP currencies (honor, conquest, marks, etc.) per character.
 
 - Tooltip on hover over PvP currency items/icons
-- Full overview panel via `/` command or minimap button
-- Settings: hide/show tracked characters to reduce noise
+- Full overview panel via `/nrc` or minimap button
+- Settings: hide/show tracked chars, disable tooltip extension
 
 ## Files
 
-- `NelxRatedCurrency.toc` — manifest, interface version, SavedVariables declaration
-- `NelxRatedCurrency.lua` — main logic (currently scaffold)
+- `NelxRatedCurrency.toc` — manifest, lib load order, SavedVariables declaration
+- `NelxRatedCurrency.lua` — bootstrap, SavedVariables init, `ns.TRACKED_CURRENCIES`, `ns.GetCharKey()`, currency capture
+- `Tooltip.lua` — tooltip hooks + per-char currency rows
+- `OverviewUI.lua` — overview panel, sortable table, `ns.ToggleOverview()`
+- `SettingsUI.lua` — settings frame (About / Characters / Settings), `ns.ShowSettings()`
+- `MinimapButton.lua` — LibDBIcon registration, minimap button behavior
+- `libs/` — embedded: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0
 
 ## SavedVariables
 
-`NelxRatedCurrencyDB` — persisted per account. Initialized on `ADDON_LOADED`.
+`NelxRatedCurrencyDB` — persisted per account. Init on `ADDON_LOADED`.
 
 ## Architecture Notes
 
 - `ns` (namespace table) passed via `...` — use for all module-level shared state
-- `ns.db` points to `NelxRatedCurrencyDB` after load
-- Register new events on the existing `frame` or create sub-frames per feature
+- `ns.db` → `NelxRatedCurrencyDB` after `ADDON_LOADED`
+- `ns.TRACKED_CURRENCIES = { {id, name}, ... }` — source of truth for currency list; add new currencies here only
+- `ns.GetCharKey()` — returns `"Name-Realm"` key for current char
+- `ns.ToggleOverview()` / `ns.ShowOverview()` — overview panel public API
+- `ns.ShowSettings()` / `ns.ToggleSettings()` — settings panel public API
+- Both UI frames lazy (created on first open, not at load)
+- Both frames in `UISpecialFrames` (ESC closes)
+- MinimapButton registers on `PLAYER_LOGIN` to guarantee `ns.db` ready
 
 ## WoW API Patterns
 
-- Currency data: `C_CurrencyInfo.GetCurrencyInfo(currencyID)`
-- Tooltip hooks: `GameTooltip:HookScript("OnTooltipSetItem", ...)` or `TooltipDataProcessor`
-- Minimap button: use LibDBIcon or manual `CreateFrame("Button", nil, Minimap)`
-- Multi-char data: key `NelxRatedCurrencyDB` by `UnitName("player").."-"..GetRealmName()`
+- Currency data: `C_CurrencyInfo.GetCurrencyInfo(currencyID)` → `info.quantity`, `info.maxQuantity`
+- Tooltip (currency tab): `TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Currency, fn)`
+- Tooltip (bag items): `GameTooltip:HookScript("OnTooltipSetItem", fn)` + `C_CurrencyInfo.GetCurrencyContainerCurrencyID` (nil-guard — may not exist in 12.x)
+- Minimap: LibDBIcon-1.0 in `libs/`; position saved in `ns.db.settings.minimapPosition`
+- Multi-char key: `UnitName("player").."-"..GetRealmName()`
 - SlashCmd: `SLASH_NELXRATEDCURRENCY1 = "/nrc"`
+- Addon version: `C_AddOns.GetAddOnMetadata(addonName, "Version")`
+- Class colors: `RAID_CLASS_COLORS[classFileName]` → `.r`, `.g`, `.b`
 
 ## UI Color Theme
 
-Gold theme. Use consistently across all frames, borders, text accents.
+Gold theme. Use across all frames, borders, text accents.
 
 | Role | R | G | B | Hex | WoW SetRGB |
 |------|---|---|---|-----|------------|
@@ -45,10 +59,30 @@ Gold theme. Use consistently across all frames, borders, text accents.
 | Subtext / dim | 0.75 | 0.65 | 0.3 | `#BFA64D` | `0.75, 0.65, 0.3` |
 | Highlight / hover | 1.0 | 1.0 | 0.6 | `#FFFF99` | `1, 1, 0.6` |
 
-Border thickness: 1px. Corner style: square. Background alpha: 0.85.
+Border: 1px. Corners: square. Background alpha: 0.85.
+
+## SavedVariables Schema
+
+```
+NelxRatedCurrencyDB = {
+  schemaVersion = 1,
+  characters = {
+    ["Name-Realm"] = {
+      name, realm, classFileName, classDisplayName,
+      currencies = { [currencyID] = { amount, maxQuantity } }
+    }
+  },
+  settings = {
+    disableTooltip = false,
+    hiddenCharacters = { ["Name-Realm"] = true },
+    minimapPosition = { ... },  -- managed by LibDBIcon
+  }
+}
+```
 
 ## Dev Notes
 
-- Test in-game: copy addon folder to `WoW/_retail_/Interface/AddOns/NelxRatedCurrency`
-- Reload UI after changes: `/reload`
-- Print debug: `DEFAULT_CHAT_FRAME:AddMessage("...")`
+- Test: copy addon folder → `WoW/_retail_/Interface/AddOns/NelxRatedCurrency`
+- Reload: `/reload`
+- Debug print: `DEFAULT_CHAT_FRAME:AddMessage("...")`
+- Add currencies: edit `ns.TRACKED_CURRENCIES` in `NelxRatedCurrency.lua` only
