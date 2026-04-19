@@ -10,6 +10,15 @@ ns.TRACKED_CURRENCIES = {
 }
 
 -- ---------------------------------------------------------------------------
+-- Tracked bag items — item counts captured per character
+-- ---------------------------------------------------------------------------
+ns.TRACKED_ITEMS = {
+    { id = 137642, name = "Mark of Honor" },
+    { id = 241334, name = "Flask of Honor" },
+    { id = 258622, name = "Medal of Conquest" },
+}
+
+-- ---------------------------------------------------------------------------
 -- Helper: build character key
 -- ---------------------------------------------------------------------------
 function ns.GetCharKey()
@@ -43,6 +52,12 @@ local function CaptureCurrencies()
                 maxQuantity = info.maxQuantity,
             }
         end
+    end
+
+    record.items = record.items or {}
+    for _, itemDef in ipairs(ns.TRACKED_ITEMS) do
+        local count = GetItemCount(itemDef.id, true) or 0
+        record.items[itemDef.id] = { count = count }
     end
 end
 

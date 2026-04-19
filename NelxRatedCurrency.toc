@@ -1,6 +1,6 @@
 ## Interface: 120001
 ## Title: NelxRatedCurrency
-## Notes: Addon with an overview of all pvp related currency listed per character. should display a tooltip if hovered over a pvp currency (honor, conquest, marks etc - everything pvp related) and does display a complete overview if opened per command or via minimap button. additionally in settings it should be possible to hide tracked characters to control noise level
+## Notes: Track PvP currencies (honor, conquest, marks) per character. Tooltip on hover, full overview via /nrc or minimap button. Settings: show/hide tracked chars, toggle tooltip.
 ## Author: Nelxbuilds
 ## Version: 1.0.0
 ## SavedVariables: NelxRatedCurrencyDB
