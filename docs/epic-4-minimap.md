@@ -29,4 +29,5 @@ Embed the LibDBIcon library stack and register a draggable minimap button that g
 - [ ] Left-clicking the minimap button toggles the overview panel (same behavior as `/nrc`)
 - [ ] Right-clicking the minimap button opens the settings panel (`NelxRatedCurrencySettingsFrame`)
 - [ ] The button is draggable around the minimap edge
+- [ ] On hover, the minimap button shows a tooltip: `"NelxRatedCurrency"` as title, `"Left-click: Toggle overview"` and `"Right-click: Settings"` as hint lines
 - [ ] The button's position around the minimap edge persists across sessions via `ns.db.settings.minimapPosition`

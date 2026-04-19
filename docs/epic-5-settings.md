@@ -10,7 +10,7 @@ Provide a standalone settings panel where the player can read addon metadata, hi
 
 **Acceptance Criteria**:
 
-- [ ] The frame is created via `CreateFrame("Frame", "NelxRatedCurrencySettingsFrame", UIParent, "BasicFrameTemplateWithInset")`
+- [ ] The frame is created lazily (on first open, not at addon load time) via `CreateFrame("Frame", "NelxRatedCurrencySettingsFrame", UIParent, "BasicFrameTemplateWithInset")`
 - [ ] Frame size is 380×460 pixels
 - [ ] The frame is centered on screen when first shown
 - [ ] The frame is draggable by its title bar
@@ -20,6 +20,7 @@ Provide a standalone settings panel where the player can read addon metadata, hi
 - [ ] Each section is separated from the next by a thin horizontal line rendered in gold color (R=1, G=0.82, B=0)
 - [ ] The **About** section displays static text: addon name, version (from `C_AddOns.GetAddOnMetadata(addonName, "Version")`), author (`"Nelxbuilds"`), and a one-line description
 - [ ] The panel can be closed via the frame's built-in close button
+- [ ] The frame is added to `UISpecialFrames` so pressing ESC closes it
 
 ---
 

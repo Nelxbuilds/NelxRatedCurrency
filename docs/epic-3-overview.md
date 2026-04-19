@@ -19,6 +19,7 @@ Provide a toggleable panel that displays all tracked characters and their PvP cu
 - [ ] Background is a solid dark fill with R=0.05, G=0.04, B=0 at alpha 0.85
 - [ ] `SLASH_NELXRATEDCURRENCY1 = "/nrc"` is registered and toggles the panel (show if hidden, hide if shown)
 - [ ] The panel can be closed via the frame's built-in close button provided by `BasicFrameTemplateWithInset`
+- [ ] The frame is added to `UISpecialFrames` so pressing ESC closes it
 
 ---
 
