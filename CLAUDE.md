@@ -13,7 +13,7 @@ Track all PvP currencies (honor, conquest, marks, etc.) per character.
 ## Files
 
 - `NelxRatedCurrency.toc` — manifest, lib load order, SavedVariables declaration
-- `NelxRatedCurrency.lua` — bootstrap, SavedVariables init, `ns.TRACKED_CURRENCIES`, `ns.GetCharKey()`, currency capture
+- `NelxRatedCurrency.lua` — bootstrap, SavedVariables init, `ns.TRACKED_CURRENCIES`, `ns.TRACKED_ITEMS`, `ns.GetCharKey()`, currency + item capture
 - `Tooltip.lua` — tooltip hooks + per-char currency rows
 - `OverviewUI.lua` — overview panel, sortable table, `ns.ToggleOverview()`
 - `SettingsUI.lua` — settings frame (About / Characters / Settings), `ns.ShowSettings()`
@@ -29,6 +29,7 @@ Track all PvP currencies (honor, conquest, marks, etc.) per character.
 - `ns` (namespace table) passed via `...` — use for all module-level shared state
 - `ns.db` → `NelxRatedCurrencyDB` after `ADDON_LOADED`
 - `ns.TRACKED_CURRENCIES = { {id, name}, ... }` — source of truth for currency list; add new currencies here only
+- `ns.TRACKED_ITEMS = { {id, name}, ... }` — source of truth for tracked bag items (Mark of Honor, Flask of Honor, Medal of Conquest); add new items here only
 - `ns.GetCharKey()` — returns `"Name-Realm"` key for current char
 - `ns.ToggleOverview()` / `ns.ShowOverview()` — overview panel public API
 - `ns.ShowSettings()` / `ns.ToggleSettings()` — settings panel public API
@@ -40,7 +41,7 @@ Track all PvP currencies (honor, conquest, marks, etc.) per character.
 
 - Currency data: `C_CurrencyInfo.GetCurrencyInfo(currencyID)` → `info.quantity`, `info.maxQuantity`
 - Tooltip (currency tab): `TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Currency, fn)`
-- Tooltip (bag items): `GameTooltip:HookScript("OnTooltipSetItem", fn)` + `C_CurrencyInfo.GetCurrencyContainerCurrencyID` (nil-guard — may not exist in 12.x)
+- Tooltip (bag items): `TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Item, fn)` — use `data.id` for itemID; supersedes `GameTooltip:HookScript("OnTooltipSetItem")` approach
 - Minimap: LibDBIcon-1.0 in `libs/`; position saved in `ns.db.settings.minimapPosition`
 - Multi-char key: `UnitName("player").."-"..GetRealmName()`
 - SlashCmd: `SLASH_NELXRATEDCURRENCY1 = "/nrc"`
@@ -69,7 +70,8 @@ NelxRatedCurrencyDB = {
   characters = {
     ["Name-Realm"] = {
       name, realm, classFileName, classDisplayName,
-      currencies = { [currencyID] = { amount, maxQuantity } }
+      currencies = { [currencyID] = { amount, maxQuantity } },
+      items = { [itemID] = { count } }
     }
   },
   settings = {
@@ -86,3 +88,7 @@ NelxRatedCurrencyDB = {
 - Reload: `/reload`
 - Debug print: `DEFAULT_CHAT_FRAME:AddMessage("...")`
 - Add currencies: edit `ns.TRACKED_CURRENCIES` in `NelxRatedCurrency.lua` only
+- Add bag items: edit `ns.TRACKED_ITEMS` in `NelxRatedCurrency.lua` only; also add column def to `COLUMNS` in `OverviewUI.lua`
+- Overview frame width: 650px (expanded from 500 to fit item columns)
+- `COLUMNS` in `OverviewUI.lua` drives both header render and row render — type field: `"name"` | `"currency"` | `"item"`
+- Item counts captured via `GetItemCount(itemID, true)` (includes bank)
