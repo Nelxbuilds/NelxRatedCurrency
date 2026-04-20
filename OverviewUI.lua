@@ -1,36 +1,39 @@
--- OverviewUI.lua — Overview Panel (Epic 3)
+-- OverviewUI.lua — Overview panel (currency table)
 local addonName, ns = ...
 
 -- ---------------------------------------------------------------------------
 -- Sort state
 -- ---------------------------------------------------------------------------
-local sortColumn    = "name"   -- "name" | currency id (number) | item id (number)
+local sortColumn    = "name"
 local sortAscending = true
 
 -- ---------------------------------------------------------------------------
 -- Column definitions
 -- ---------------------------------------------------------------------------
 local COLUMNS = {
-    { key = "name",  label = "Character",  xOffset = 10,  type = "name"     },
-    { key = 1792,    label = "Honor",      xOffset = 170, type = "currency"  },
-    { key = 1602,    label = "Conquest",   xOffset = 255, type = "currency"  },
-    { key = 137642,  label = "Mark",       xOffset = 340, type = "item"      },
-    { key = 241334,  label = "Flask",      xOffset = 425, type = "item"      },
-    { key = 258622,  label = "Medal",      xOffset = 510, type = "item"      },
+    { key = "name",  label = "Character",  xOffset = 8,   type = "name"     },
+    { key = 1792,    label = "Honor",      xOffset = 150,  type = "currency" },
+    { key = 1602,    label = "Conquest",   xOffset = 230,  type = "currency" },
+    { key = 137642,  label = "Mark",       xOffset = 310,  type = "item"     },
+    { key = 241334,  label = "Flask",      xOffset = 380,  type = "item"     },
+    { key = 258622,  label = "Medal",      xOffset = 440,  type = "item"     },
 }
+
+local ROW_HEIGHT = 28
+local ROW_GAP    = 2
 
 -- ---------------------------------------------------------------------------
 -- Build a sorted list of character rows for display
 -- ---------------------------------------------------------------------------
 local function BuildSortedRows()
     local rows = {}
+    if not ns.db then return rows end
     for charKey, record in pairs(ns.db.characters) do
         if not ns.db.settings.hiddenCharacters[charKey] then
             rows[#rows + 1] = { key = charKey, record = record }
         end
     end
 
-    -- Find the type of the current sort column
     local sortType = "name"
     for _, col in ipairs(COLUMNS) do
         if col.key == sortColumn then
@@ -69,123 +72,132 @@ local function BuildSortedRows()
 end
 
 -- ---------------------------------------------------------------------------
--- Row pool (reusable font strings)
+-- Row pool & header tracking
 -- ---------------------------------------------------------------------------
 local rowPool = {}
 local headerButtons = {}
+local scrollChild
 
 -- ---------------------------------------------------------------------------
 -- Refresh the table contents
 -- ---------------------------------------------------------------------------
-local function RefreshTable(frame)
-    for _, rowFrames in ipairs(rowPool) do
-        for _, fs in ipairs(rowFrames) do
-            fs:Hide()
-        end
+local function RefreshTable()
+    for _, row in ipairs(rowPool) do
+        row:Hide()
     end
 
     if not ns.db then return end
 
     local rows = BuildSortedRows()
-    local rowHeight = 20
-    local startY = -50
+    local yOff = 0
 
     for i, rowData in ipairs(rows) do
         local record = rowData.record
 
         if not rowPool[i] then
-            rowPool[i] = {}
+            local row = CreateFrame("Frame", nil, scrollChild, "BackdropTemplate")
+            row:SetHeight(ROW_HEIGHT)
+            row:SetBackdrop({
+                bgFile   = "Interface\\Buttons\\WHITE8x8",
+                edgeFile = "Interface\\Buttons\\WHITE8x8",
+                edgeSize = 1,
+            })
+
+            row.cells = {}
             for j = 1, #COLUMNS do
-                local fs = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                rowPool[i][j] = fs
+                local fs = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+                row.cells[j] = fs
             end
+
+            rowPool[i] = row
         end
 
-        local y = startY - (i - 1) * rowHeight
+        local row = rowPool[i]
+        row:ClearAllPoints()
+        row:SetPoint("TOPLEFT", 0, -yOff)
+        row:SetPoint("RIGHT", scrollChild, "RIGHT", 0, 0)
+
+        -- Alternating row colors
+        if i % 2 == 0 then
+            row:SetBackdropColor(0.12, 0.12, 0.12, 0.5)
+        else
+            row:SetBackdropColor(0.08, 0.08, 0.08, 0.5)
+        end
+        row:SetBackdropBorderColor(0.2, 0.2, 0.2, 0.3)
 
         for j, colDef in ipairs(COLUMNS) do
-            local fs = rowPool[i][j]
+            local fs = row.cells[j]
             fs:ClearAllPoints()
-            fs:SetPoint("TOPLEFT", frame, "TOPLEFT", colDef.xOffset, y)
+            fs:SetPoint("LEFT", row, "LEFT", colDef.xOffset, 0)
 
             if colDef.type == "name" then
-                local classColor = RAID_CLASS_COLORS and record.classFileName and RAID_CLASS_COLORS[record.classFileName]
+                local classColor = RAID_CLASS_COLORS and record.classFileName
+                    and RAID_CLASS_COLORS[record.classFileName]
                 if classColor then
                     fs:SetTextColor(classColor.r, classColor.g, classColor.b)
                 else
-                    fs:SetTextColor(1, 1, 1)
+                    fs:SetTextColor(0.8, 0.8, 0.8)
                 end
                 fs:SetText(record.name or "Unknown")
             elseif colDef.type == "currency" then
                 fs:SetTextColor(1, 1, 1)
                 local cd = record.currencies and record.currencies[colDef.key]
-                fs:SetText(cd and tostring(cd.amount) or "—")
+                fs:SetText(cd and tostring(cd.amount) or "\226\128\148")
             elseif colDef.type == "item" then
                 fs:SetTextColor(1, 1, 1)
                 local id = record.items and record.items[colDef.key]
-                fs:SetText(id and tostring(id.count) or "—")
+                fs:SetText(id and tostring(id.count) or "\226\128\148")
             end
 
             fs:Show()
         end
+
+        row:Show()
+        yOff = yOff + ROW_HEIGHT + ROW_GAP
     end
 
-    -- Update column header labels with sort indicators
+    -- Hide excess rows
+    for j = #rows + 1, #rowPool do
+        rowPool[j]:Hide()
+    end
+
+    scrollChild:SetHeight(math.max(yOff, 1))
+
+    -- Update header sort indicators
     for _, colDef in ipairs(COLUMNS) do
         local btn = headerButtons[colDef.key]
         if btn then
             local indicator = ""
             if sortColumn == colDef.key then
-                indicator = sortAscending and " ▲" or " ▼"
+                indicator = sortAscending and " \226\150\178" or " \226\150\188"
             end
-            btn:SetText(colDef.label .. indicator)
+            btn.label:SetText(colDef.label .. indicator)
         end
     end
 end
 
 -- ---------------------------------------------------------------------------
--- Lazy frame creation
+-- Panel creation (called from MainFrame.lua)
 -- ---------------------------------------------------------------------------
-local overviewFrame
-
-local function CreateOverviewFrame()
-    local frame = CreateFrame("Frame", "NelxRatedCurrencyFrame", UIParent, "BasicFrameTemplateWithInset")
-    frame:SetSize(650, 350)
-    frame:SetPoint("CENTER")
-    frame:SetMovable(true)
-    frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-
+function ns.CreateOverviewPanel(parent)
     -- Title
-    frame.TitleText:SetText("NelxRatedCurrency")
-    frame.TitleText:SetTextColor(1, 0.9, 0.4)
+    local title = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", 8, -8)
+    title:SetText("Overview")
+    title:SetTextColor(unpack(ns.COLORS.GOLD))
 
-    -- Background
-    frame:SetBackdrop({
-        bgFile   = "Interface\\Buttons\\WHITE8X8",
-        edgeFile = "Interface\\Buttons\\WHITE8X8",
-        edgeSize = 1,
-    })
-    frame:SetBackdropColor(0.05, 0.04, 0, 0.85)
-    frame:SetBackdropBorderColor(1, 0.82, 0, 1)
-
-    -- ESC closes
-    tinsert(UISpecialFrames, "NelxRatedCurrencyFrame")
-
-    -- Column headers (clickable buttons for sorting)
+    -- Column headers
+    local headerY = -36
     for _, colDef in ipairs(COLUMNS) do
-        local btn = CreateFrame("Button", nil, frame)
-        btn:SetSize(110, 20)
-        btn:SetPoint("TOPLEFT", frame, "TOPLEFT", colDef.xOffset, -28)
+        local btn = CreateFrame("Button", nil, parent)
+        btn:SetSize(70, 20)
+        btn:SetPoint("TOPLEFT", parent, "TOPLEFT", colDef.xOffset, headerY)
 
-        local label = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        label:SetAllPoints()
-        label:SetJustifyH("LEFT")
-        label:SetTextColor(1, 0.9, 0.4)
-        btn.SetText = function(self, text) label:SetText(text) end
-        btn:SetText(colDef.label)
+        btn.label = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        btn.label:SetAllPoints()
+        btn.label:SetJustifyH("LEFT")
+        btn.label:SetTextColor(1, 0.82, 0)
+        btn.label:SetText(colDef.label)
 
         headerButtons[colDef.key] = btn
 
@@ -197,49 +209,38 @@ local function CreateOverviewFrame()
                 sortColumn    = colKey
                 sortAscending = true
             end
-            RefreshTable(frame)
+            RefreshTable()
         end)
 
-        btn:SetScript("OnEnter", function() label:SetTextColor(1, 1, 0.6) end)
-        btn:SetScript("OnLeave", function() label:SetTextColor(1, 0.9, 0.4) end)
+        btn:SetScript("OnEnter", function() btn.label:SetTextColor(1, 1, 0.6) end)
+        btn:SetScript("OnLeave", function() btn.label:SetTextColor(1, 0.82, 0) end)
     end
 
-    -- Separator line under headers
-    local sep = frame:CreateTexture(nil, "ARTWORK")
-    sep:SetColorTexture(1, 0.82, 0, 1)
-    sep:SetSize(620, 1)
-    sep:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -48)
+    -- Separator under headers
+    local sep = parent:CreateTexture(nil, "ARTWORK")
+    sep:SetColorTexture(1, 0.82, 0, 0.5)
+    sep:SetHeight(1)
+    sep:SetPoint("TOPLEFT", parent, "TOPLEFT", 4, headerY - 20)
+    sep:SetPoint("RIGHT", parent, "RIGHT", -4, 0)
 
-    frame:SetScript("OnShow", function(self)
-        RefreshTable(self)
+    -- Scroll area
+    local scroll = CreateFrame("ScrollFrame", nil, parent)
+    scroll:SetPoint("TOPLEFT", 0, headerY - 24)
+    scroll:SetPoint("BOTTOMRIGHT", 0, 4)
+    scroll:EnableMouseWheel(true)
+    scroll:SetScript("OnMouseWheel", function(self, delta)
+        local cur = self:GetVerticalScroll()
+        local max = self:GetVerticalScrollRange()
+        self:SetVerticalScroll(math.max(0, math.min(cur - delta * 40, max)))
     end)
 
-    return frame
-end
+    scrollChild = CreateFrame("Frame", nil, scroll)
+    scroll:SetScrollChild(scrollChild)
+    scrollChild:SetHeight(1)
+    scroll:SetScript("OnSizeChanged", function(self, w)
+        scrollChild:SetWidth(w)
+    end)
 
--- ---------------------------------------------------------------------------
--- Public: toggle overview
--- ---------------------------------------------------------------------------
-function ns.ToggleOverview()
-    if not overviewFrame then
-        overviewFrame = CreateOverviewFrame()
-    end
-
-    if overviewFrame:IsShown() then
-        overviewFrame:Hide()
-    else
-        RefreshTable(overviewFrame)
-        overviewFrame:Show()
-    end
-end
-
--- ---------------------------------------------------------------------------
--- Public: open overview (used by minimap button)
--- ---------------------------------------------------------------------------
-function ns.ShowOverview()
-    if not overviewFrame then
-        overviewFrame = CreateOverviewFrame()
-    end
-    RefreshTable(overviewFrame)
-    overviewFrame:Show()
+    -- Refresh on show
+    parent:SetScript("OnShow", function() RefreshTable() end)
 end

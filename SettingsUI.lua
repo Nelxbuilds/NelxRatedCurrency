@@ -1,7 +1,6 @@
--- SettingsUI.lua
+-- SettingsUI.lua — Settings panel
 local addonName, ns = ...
 
-local settingsFrame
 local charCheckboxes = {}
 
 -- ---------------------------------------------------------------------------
@@ -49,7 +48,8 @@ local function RefreshCharacterList(scrollChild)
         local label = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         label:SetPoint("LEFT", cb, "RIGHT", 4, 0)
 
-        local classColor = RAID_CLASS_COLORS and record.classFileName and RAID_CLASS_COLORS[record.classFileName]
+        local classColor = RAID_CLASS_COLORS and record.classFileName
+            and RAID_CLASS_COLORS[record.classFileName]
         if classColor then
             label:SetTextColor(classColor.r, classColor.g, classColor.b)
         else
@@ -65,132 +65,32 @@ local function RefreshCharacterList(scrollChild)
 end
 
 -- ---------------------------------------------------------------------------
--- Lazy frame creation
+-- Panel creation (called from MainFrame.lua)
 -- ---------------------------------------------------------------------------
-local function CreateSettingsFrame()
-    local SIDEBAR_W = 128
-    local FRAME_W   = 420
-    local FRAME_H   = 460
+function ns.CreateSettingsPanel(parent)
+    local CONTENT_W = 480
 
-    local frame = CreateFrame("Frame", "NelxRatedCurrencySettingsFrame", UIParent)
-    frame:SetSize(FRAME_W, FRAME_H)
-    frame:SetPoint("CENTER")
-    frame:SetMovable(true)
-    frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
-    frame:SetFrameStrata("MEDIUM")
+    -- Title
+    local title = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", 8, -8)
+    title:SetTextColor(unpack(ns.COLORS.GOLD))
+    title:SetText("Settings")
 
-    Mixin(frame, BackdropTemplateMixin)
-    frame:SetBackdrop({
-        bgFile   = "Interface\\Buttons\\WHITE8X8",
-        edgeFile = "Interface\\Buttons\\WHITE8X8",
-        edgeSize = 1,
-    })
-    frame:SetBackdropColor(0.05, 0.04, 0, 0.92)
-    frame:SetBackdropBorderColor(1, 0.82, 0, 1)
-
-    -- -----------------------------------------------------------------------
-    -- Sidebar
-    -- -----------------------------------------------------------------------
-    local sidebarBg = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
-    sidebarBg:SetColorTexture(0.03, 0.025, 0, 1)
-    sidebarBg:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
-    sidebarBg:SetSize(SIDEBAR_W - 1, FRAME_H - 2)
-
-    local sidebarDivider = frame:CreateTexture(nil, "ARTWORK")
-    sidebarDivider:SetColorTexture(1, 0.82, 0, 1)
-    sidebarDivider:SetSize(1, FRAME_H - 2)
-    sidebarDivider:SetPoint("TOPLEFT", frame, "TOPLEFT", SIDEBAR_W, -1)
-
-    -- Sidebar title
-    local sideTitle1 = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    sideTitle1:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -12)
-    sideTitle1:SetTextColor(1, 0.82, 0)
-    sideTitle1:SetText("NelxRated")
-
-    local sideTitle2 = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    sideTitle2:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -30)
-    sideTitle2:SetTextColor(1, 0.82, 0)
-    sideTitle2:SetText("Currency")
-
-    local sideTitleSep = frame:CreateTexture(nil, "ARTWORK")
-    sideTitleSep:SetColorTexture(1, 0.82, 0, 0.35)
-    sideTitleSep:SetSize(SIDEBAR_W - 20, 1)
-    sideTitleSep:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -46)
-
-    -- "Overview" nav item — clickable
-    local overviewNavBtn = CreateFrame("Button", nil, frame)
-    overviewNavBtn:SetSize(SIDEBAR_W - 2, 22)
-    overviewNavBtn:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -54)
-
-    local overviewNavLabel = overviewNavBtn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    overviewNavLabel:SetPoint("LEFT", overviewNavBtn, "LEFT", 11, 0)
-    overviewNavLabel:SetTextColor(0.75, 0.65, 0.3)
-    overviewNavLabel:SetText("Overview")
-
-    overviewNavBtn:SetScript("OnEnter", function() overviewNavLabel:SetTextColor(1, 1, 0.6) end)
-    overviewNavBtn:SetScript("OnLeave", function() overviewNavLabel:SetTextColor(0.75, 0.65, 0.3) end)
-    overviewNavBtn:SetScript("OnClick", function()
-        frame:Hide()
-        ns.ShowOverview()
-    end)
-
-    -- "Settings" nav item — active / highlighted
-    local settingsHighlight = frame:CreateTexture(nil, "BACKGROUND")
-    settingsHighlight:SetColorTexture(1, 0.82, 0, 0.12)
-    settingsHighlight:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -78)
-    settingsHighlight:SetSize(SIDEBAR_W - 1, 22)
-
-    local settingsNavText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    settingsNavText:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -82)
-    settingsNavText:SetTextColor(1, 0.9, 0.4)
-    settingsNavText:SetText("Settings")
-
-    -- -----------------------------------------------------------------------
-    -- Close button
-    -- -----------------------------------------------------------------------
-    local closeBtn = CreateFrame("Button", nil, frame)
-    closeBtn:SetSize(20, 20)
-    closeBtn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, -4)
-
-    local closeTex = closeBtn:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    closeTex:SetAllPoints()
-    closeTex:SetJustifyH("CENTER")
-    closeTex:SetJustifyV("MIDDLE")
-    closeTex:SetText("X")
-    closeTex:SetTextColor(0.75, 0.2, 0.2)
-
-    closeBtn:SetScript("OnClick", function() frame:Hide() end)
-    closeBtn:SetScript("OnEnter", function() closeTex:SetTextColor(1, 0.1, 0.1) end)
-    closeBtn:SetScript("OnLeave", function() closeTex:SetTextColor(0.75, 0.2, 0.2) end)
-
-    -- -----------------------------------------------------------------------
-    -- Main content area
-    -- -----------------------------------------------------------------------
-    local CONTENT_X = SIDEBAR_W + 10
-    local CONTENT_W = FRAME_W - SIDEBAR_W - 18
-
-    local mainTitle = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    mainTitle:SetPoint("TOPLEFT", frame, "TOPLEFT", CONTENT_X, -12)
-    mainTitle:SetTextColor(1, 0.9, 0.4)
-    mainTitle:SetText("Settings")
-
-    local mainTitleSep = frame:CreateTexture(nil, "ARTWORK")
-    mainTitleSep:SetColorTexture(1, 0.82, 0, 1)
-    mainTitleSep:SetSize(CONTENT_W, 1)
-    mainTitleSep:SetPoint("TOPLEFT", frame, "TOPLEFT", SIDEBAR_W + 8, -33)
+    local titleSep = parent:CreateTexture(nil, "ARTWORK")
+    titleSep:SetColorTexture(1, 0.82, 0, 1)
+    titleSep:SetHeight(1)
+    titleSep:SetPoint("TOPLEFT", 4, -30)
+    titleSep:SetPoint("RIGHT", parent, "RIGHT", -4, 0)
 
     -- -----------------------------------------------------------------------
     -- About section
     -- -----------------------------------------------------------------------
-    local aboutHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    aboutHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", CONTENT_X, -42)
-    aboutHeader:SetTextColor(1, 0.9, 0.4)
+    local aboutHeader = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    aboutHeader:SetPoint("TOPLEFT", 8, -40)
+    aboutHeader:SetTextColor(unpack(ns.COLORS.GOLD))
     aboutHeader:SetText("About")
 
-    local version    = C_AddOns.GetAddOnMetadata(addonName, "Version") or "1.0.0"
+    local version = C_AddOns.GetAddOnMetadata(addonName, "Version") or "1.0.0"
     local aboutLines = {
         "NelxRatedCurrency  v" .. version,
         "Author: Nelxbuilds",
@@ -198,60 +98,73 @@ local function CreateSettingsFrame()
     }
 
     for i, line in ipairs(aboutLines) do
-        local fs = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        fs:SetPoint("TOPLEFT", frame, "TOPLEFT", CONTENT_X, -42 - i * 16)
-        fs:SetTextColor(0.75, 0.65, 0.3)
+        local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        fs:SetPoint("TOPLEFT", 8, -40 - i * 16)
+        fs:SetTextColor(0.6, 0.6, 0.6)
         fs:SetText(line)
     end
 
-    local sepY1 = -42 - #aboutLines * 16 - 8
+    local sepY1 = -40 - #aboutLines * 16 - 8
 
-    local sep1 = frame:CreateTexture(nil, "ARTWORK")
+    local sep1 = parent:CreateTexture(nil, "ARTWORK")
     sep1:SetColorTexture(1, 0.82, 0, 0.35)
-    sep1:SetSize(CONTENT_W, 1)
-    sep1:SetPoint("TOPLEFT", frame, "TOPLEFT", SIDEBAR_W + 8, sepY1)
+    sep1:SetHeight(1)
+    sep1:SetPoint("TOPLEFT", 4, sepY1)
+    sep1:SetPoint("RIGHT", parent, "RIGHT", -4, 0)
 
     -- -----------------------------------------------------------------------
     -- Characters section
     -- -----------------------------------------------------------------------
     local charSectionY = sepY1 - 14
 
-    local charHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    charHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", CONTENT_X, charSectionY)
-    charHeader:SetTextColor(1, 0.9, 0.4)
+    local charHeader = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    charHeader:SetPoint("TOPLEFT", 8, charSectionY)
+    charHeader:SetTextColor(unpack(ns.COLORS.GOLD))
     charHeader:SetText("Characters")
 
-    local CHAR_LIST_H  = 8 * 24
-    local scrollFrame  = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetSize(CONTENT_W - 20, CHAR_LIST_H)
-    scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", CONTENT_X, charSectionY - 18)
+    local CHAR_LIST_H = 8 * 24
+
+    local scrollFrame = CreateFrame("ScrollFrame", nil, parent)
+    scrollFrame:SetHeight(CHAR_LIST_H)
+    scrollFrame:SetPoint("TOPLEFT", 8, charSectionY - 18)
+    scrollFrame:SetPoint("RIGHT", parent, "RIGHT", -8, 0)
+    scrollFrame:EnableMouseWheel(true)
+    scrollFrame:SetScript("OnMouseWheel", function(self, delta)
+        local cur = self:GetVerticalScroll()
+        local max = self:GetVerticalScrollRange()
+        self:SetVerticalScroll(math.max(0, math.min(cur - delta * 40, max)))
+    end)
 
     local scrollChild = CreateFrame("Frame", nil, scrollFrame)
-    scrollChild:SetSize(CONTENT_W - 40, 1)
     scrollFrame:SetScrollChild(scrollChild)
+    scrollChild:SetHeight(1)
+    scrollFrame:SetScript("OnSizeChanged", function(self, w)
+        scrollChild:SetWidth(w)
+    end)
 
     local sepY2 = charSectionY - 18 - CHAR_LIST_H - 8
 
-    local sep2 = frame:CreateTexture(nil, "ARTWORK")
+    local sep2 = parent:CreateTexture(nil, "ARTWORK")
     sep2:SetColorTexture(1, 0.82, 0, 0.35)
-    sep2:SetSize(CONTENT_W, 1)
-    sep2:SetPoint("TOPLEFT", frame, "TOPLEFT", SIDEBAR_W + 8, sepY2)
+    sep2:SetHeight(1)
+    sep2:SetPoint("TOPLEFT", 4, sepY2)
+    sep2:SetPoint("RIGHT", parent, "RIGHT", -4, 0)
 
     -- -----------------------------------------------------------------------
-    -- Settings section
+    -- Options section
     -- -----------------------------------------------------------------------
-    local settingsSectionY = sepY2 - 14
+    local optionsSectionY = sepY2 - 14
 
-    local settingsHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    settingsHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", CONTENT_X, settingsSectionY)
-    settingsHeader:SetTextColor(1, 0.9, 0.4)
-    settingsHeader:SetText("Options")
+    local optionsHeader = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    optionsHeader:SetPoint("TOPLEFT", 8, optionsSectionY)
+    optionsHeader:SetTextColor(unpack(ns.COLORS.GOLD))
+    optionsHeader:SetText("Options")
 
-    local tooltipCB = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+    local tooltipCB = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     tooltipCB:SetSize(20, 20)
-    tooltipCB:SetPoint("TOPLEFT", frame, "TOPLEFT", CONTENT_X, settingsSectionY - 18)
+    tooltipCB:SetPoint("TOPLEFT", 8, optionsSectionY - 18)
 
-    local tooltipLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    local tooltipLabel = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     tooltipLabel:SetPoint("LEFT", tooltipCB, "RIGHT", 4, 0)
     tooltipLabel:SetTextColor(0.88, 0.88, 0.88)
     tooltipLabel:SetText("Disable tooltip extension")
@@ -265,36 +178,10 @@ local function CreateSettingsFrame()
     -- -----------------------------------------------------------------------
     -- OnShow: sync dynamic content
     -- -----------------------------------------------------------------------
-    frame:SetScript("OnShow", function(self)
+    parent:SetScript("OnShow", function()
         RefreshCharacterList(scrollChild)
         if ns.db then
             tooltipCB:SetChecked(ns.db.settings.disableTooltip == true)
         end
     end)
-
-    -- ESC closes
-    tinsert(UISpecialFrames, "NelxRatedCurrencySettingsFrame")
-
-    return frame
-end
-
--- ---------------------------------------------------------------------------
--- Public API
--- ---------------------------------------------------------------------------
-function ns.ToggleSettings()
-    if not settingsFrame then
-        settingsFrame = CreateSettingsFrame()
-    end
-    if settingsFrame:IsShown() then
-        settingsFrame:Hide()
-    else
-        settingsFrame:Show()
-    end
-end
-
-function ns.ShowSettings()
-    if not settingsFrame then
-        settingsFrame = CreateSettingsFrame()
-    end
-    settingsFrame:Show()
 end

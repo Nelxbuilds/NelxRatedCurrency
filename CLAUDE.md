@@ -15,8 +15,9 @@ Track all PvP currencies (honor, conquest, marks, etc.) per character.
 - `NelxRatedCurrency.toc` — manifest, lib load order, SavedVariables declaration
 - `NelxRatedCurrency.lua` — bootstrap, SavedVariables init, `ns.TRACKED_CURRENCIES`, `ns.TRACKED_ITEMS`, `ns.GetCharKey()`, currency + item capture
 - `Tooltip.lua` — tooltip hooks + per-char currency rows
-- `OverviewUI.lua` — overview panel, sortable table, `ns.ToggleOverview()`
-- `SettingsUI.lua` — settings frame (About / Characters / Settings), `ns.ShowSettings()`
+- `MainFrame.lua` — single main frame with sidebar navigation, color palette (`ns.COLORS`), shared backdrop (`ns.NRC_BACKDROP`), tab switching, public API (`ns.ToggleOverview()`, `ns.ShowOverview()`, `ns.ToggleSettings()`, `ns.ShowSettings()`)
+- `OverviewUI.lua` — overview tab panel creator (`ns.CreateOverviewPanel(parent)`), sortable currency table with alternating row colors
+- `SettingsUI.lua` — settings tab panel creator (`ns.CreateSettingsPanel(parent)`), About / Characters / Options sections
 - `MinimapButton.lua` — LibDBIcon registration, minimap button behavior
 - `libs/` — embedded: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0
 
@@ -31,11 +32,12 @@ Track all PvP currencies (honor, conquest, marks, etc.) per character.
 - `ns.TRACKED_CURRENCIES = { {id, name}, ... }` — source of truth for currency list; add new currencies here only
 - `ns.TRACKED_ITEMS = { {id, name}, ... }` — source of truth for tracked bag items (Mark of Honor, Flask of Honor, Medal of Conquest); add new items here only
 - `ns.GetCharKey()` — returns `"Name-Realm"` key for current char
-- `ns.ToggleOverview()` / `ns.ShowOverview()` — overview panel public API
-- `ns.ShowSettings()` / `ns.ToggleSettings()` — settings panel public API
-- Both UI frames lazy (created on first open, not at load)
-- Both frames in `UISpecialFrames` (ESC closes)
+- Single main frame (`NelxRatedCurrencyMainFrame`) with sidebar + 2 tab panels (Overview, Settings)
+- `MainFrame.lua` defines public API: `ns.ToggleOverview()`, `ns.ShowOverview()`, `ns.ToggleSettings()`, `ns.ShowSettings()`
+- `OverviewUI.lua` and `SettingsUI.lua` export panel creator functions, not standalone frames
+- Main frame lazy-created on first open, in `UISpecialFrames` (ESC closes)
 - MinimapButton registers on `PLAYER_LOGIN` to guarantee `ns.db` ready
+- Architecture mirrors NelxRated's MainFrame.lua pattern (sidebar nav + tabbed content)
 
 ## WoW API Patterns
 
@@ -50,17 +52,21 @@ Track all PvP currencies (honor, conquest, marks, etc.) per character.
 
 ## UI Color Theme
 
-Gold theme. Use across all frames, borders, text accents.
+Gold theme on neutral gray backgrounds. Mirrors NelxRated's visual style (crimson → gold).
 
-| Role | R | G | B | Hex | WoW SetRGB |
-|------|---|---|---|-----|------------|
-| Border / accent | 1.0 | 0.82 | 0.0 | `#FFD100` | `1, 0.82, 0` |
-| Header text | 1.0 | 0.90 | 0.4 | `#FFE666` | `1, 0.9, 0.4` |
-| Background (dark) | 0.05 | 0.04 | 0.0 | `#0D0A00` | `0.05, 0.04, 0` |
-| Subtext / dim | 0.75 | 0.65 | 0.3 | `#BFA64D` | `0.75, 0.65, 0.3` |
-| Highlight / hover | 1.0 | 1.0 | 0.6 | `#FFFF99` | `1, 1, 0.6` |
+Color palette defined in `MainFrame.lua` as `ns.COLORS`:
 
-Border: 1px. Corners: square. Background alpha: 0.85.
+| Role | Constant | R | G | B | A |
+|------|----------|---|---|---|---|
+| Background (base) | BG_BASE | 0.06 | 0.06 | 0.06 | 0.95 |
+| Background (raised) | BG_RAISED | 0.10 | 0.10 | 0.10 | 0.95 |
+| Accent (bright) | GOLD_BRIGHT | 1.0 | 0.82 | 0.0 | — |
+| Accent (mid) | GOLD_MID | 0.7 | 0.57 | 0.0 | — |
+| Frame border | GOLD_DIM | 0.35 | 0.28 | 0.0 | — |
+| Title / header text | GOLD | 1.0 | 0.82 | 0.0 | — |
+| Highlight / hover | — | 1.0 | 1.0 | 0.6 | — |
+
+Backdrop: `Interface\Buttons\WHITE8x8`, edgeSize 2. Rows: alternating (0.08/0.12 gray, 0.5 alpha).
 
 ## SavedVariables Schema
 
@@ -89,6 +95,6 @@ NelxRatedCurrencyDB = {
 - Debug print: `DEFAULT_CHAT_FRAME:AddMessage("...")`
 - Add currencies: edit `ns.TRACKED_CURRENCIES` in `NelxRatedCurrency.lua` only
 - Add bag items: edit `ns.TRACKED_ITEMS` in `NelxRatedCurrency.lua` only; also add column def to `COLUMNS` in `OverviewUI.lua`
-- Overview frame width: 650px (expanded from 500 to fit item columns)
+- Main frame size: 660x440, sidebar 140px wide
 - `COLUMNS` in `OverviewUI.lua` drives both header render and row render — type field: `"name"` | `"currency"` | `"item"`
 - Item counts captured via `GetItemCount(itemID, true)` (includes bank)
