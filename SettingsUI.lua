@@ -1,17 +1,18 @@
 -- SettingsUI.lua — Settings panel
 local addonName, ns = ...
 
-local charCheckboxes = {}
+local ROW_HEIGHT = 28
+local ROW_GAP    = 2
+local charRows   = {}
 
 -- ---------------------------------------------------------------------------
 -- Character list refresh
 -- ---------------------------------------------------------------------------
 local function RefreshCharacterList(scrollChild)
-    for _, cb in ipairs(charCheckboxes) do
-        cb:Hide()
-        if cb.label then cb.label:Hide() end
+    for _, row in ipairs(charRows) do
+        row:Hide()
     end
-    charCheckboxes = {}
+    charRows = {}
 
     if not ns.db then return end
 
@@ -23,44 +24,53 @@ local function RefreshCharacterList(scrollChild)
         return (a.record.name or "") < (b.record.name or "")
     end)
 
-    local rowHeight   = 24
-    local totalHeight = math.max(#chars * rowHeight, 1)
+    local totalHeight = math.max(#chars * (ROW_HEIGHT + ROW_GAP) - ROW_GAP, 1)
     scrollChild:SetHeight(totalHeight)
 
     for i, charData in ipairs(chars) do
         local record = charData.record
         local charKey = charData.key
-        local y = -(i - 1) * rowHeight
+        local y = -(i - 1) * (ROW_HEIGHT + ROW_GAP)
 
-        local cb = CreateFrame("CheckButton", nil, scrollChild, "UICheckButtonTemplate")
-        cb:SetSize(20, 20)
-        cb:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, y)
-        cb:SetChecked(not ns.db.settings.hiddenCharacters[charKey])
+        local row = CreateFrame("Frame", nil, scrollChild, "BackdropTemplate")
+        row:SetHeight(ROW_HEIGHT)
+        row:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, y)
+        row:SetPoint("RIGHT", scrollChild, "RIGHT", 0, 0)
+        row:SetBackdrop({
+            bgFile   = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 1,
+        })
+        if i % 2 == 0 then
+            row:SetBackdropColor(0.12, 0.12, 0.12, 0.5)
+        else
+            row:SetBackdropColor(0.08, 0.08, 0.08, 0.5)
+        end
+        row:SetBackdropBorderColor(0.2, 0.2, 0.2, 0.3)
 
-        cb:SetScript("OnClick", function(self)
-            if self:GetChecked() then
-                ns.db.settings.hiddenCharacters[charKey] = nil
-            else
-                ns.db.settings.hiddenCharacters[charKey] = true
-            end
-        end)
-
-        local label = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        label:SetPoint("LEFT", cb, "RIGHT", 4, 0)
-
+        local nameStr = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        nameStr:SetPoint("LEFT", 8, 0)
         local classColor = RAID_CLASS_COLORS and record.classFileName
             and RAID_CLASS_COLORS[record.classFileName]
         if classColor then
-            label:SetTextColor(classColor.r, classColor.g, classColor.b)
+            nameStr:SetTextColor(classColor.r, classColor.g, classColor.b)
         else
-            label:SetTextColor(1, 1, 1)
+            nameStr:SetTextColor(1, 1, 1)
         end
-        label:SetText(record.name or charKey)
-        label:Show()
+        nameStr:SetText(charKey)
 
-        cb:Show()
-        cb.label = label
-        charCheckboxes[#charCheckboxes + 1] = cb
+        local removeBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+        removeBtn:SetSize(60, 20)
+        removeBtn:SetPoint("RIGHT", -6, 0)
+        removeBtn:SetText("Remove")
+        removeBtn:SetScript("OnClick", function()
+            ns.db.characters[charKey] = nil
+            ns.db.settings.hiddenCharacters[charKey] = nil
+            RefreshCharacterList(scrollChild)
+        end)
+
+        row:Show()
+        charRows[#charRows + 1] = row
     end
 end
 
@@ -104,7 +114,7 @@ function ns.CreateSettingsPanel(parent)
         fs:SetText(line)
     end
 
-    local sepY1 = -40 - #aboutLines * 16 - 8
+    local sepY1 = -40 - #aboutLines * 16 - 14
 
     local sep1 = parent:CreateTexture(nil, "ARTWORK")
     sep1:SetColorTexture(1, 0.82, 0, 0.35)
