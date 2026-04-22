@@ -167,11 +167,17 @@ local function RefreshTable()
     for _, colDef in ipairs(COLUMNS) do
         local btn = headerButtons[colDef.key]
         if btn then
-            local indicator = ""
+            btn.label:SetText(colDef.label)
             if sortColumn == colDef.key then
-                indicator = sortAscending and " \226\150\178" or " \226\150\188"
+                if sortAscending then
+                    btn.arrow:SetTexture("Interface\\Buttons\\Arrow-Up-Up")
+                else
+                    btn.arrow:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
+                end
+                btn.arrow:Show()
+            else
+                btn.arrow:Hide()
             end
-            btn.label:SetText(colDef.label .. indicator)
         end
     end
 end
@@ -194,10 +200,16 @@ function ns.CreateOverviewPanel(parent)
         btn:SetPoint("TOPLEFT", parent, "TOPLEFT", colDef.xOffset, headerY)
 
         btn.label = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        btn.label:SetAllPoints()
+        btn.label:SetPoint("LEFT")
         btn.label:SetJustifyH("LEFT")
         btn.label:SetTextColor(1, 0.82, 0)
         btn.label:SetText(colDef.label)
+
+        btn.arrow = btn:CreateTexture(nil, "OVERLAY")
+        btn.arrow:SetSize(10, 10)
+        btn.arrow:SetPoint("LEFT", btn.label, "RIGHT", 2, 0)
+        btn.arrow:SetVertexColor(1, 0.82, 0)
+        btn.arrow:Hide()
 
         headerButtons[colDef.key] = btn
 
