@@ -169,11 +169,7 @@ local function RefreshTable()
         if btn then
             btn.label:SetText(colDef.label)
             if sortColumn == colDef.key then
-                if sortAscending then
-                    btn.arrow:SetTexture("Interface\\Buttons\\Arrow-Up-Up")
-                else
-                    btn.arrow:SetTexture("Interface\\Buttons\\Arrow-Down-Up")
-                end
+                btn.arrow:SetText(sortAscending and " \226\150\178" or " \226\150\188")
                 btn.arrow:Show()
             else
                 btn.arrow:Hide()
@@ -205,10 +201,9 @@ function ns.CreateOverviewPanel(parent)
         btn.label:SetTextColor(1, 0.82, 0)
         btn.label:SetText(colDef.label)
 
-        btn.arrow = btn:CreateTexture(nil, "OVERLAY")
-        btn.arrow:SetSize(10, 10)
-        btn.arrow:SetPoint("LEFT", btn.label, "RIGHT", 2, 0)
-        btn.arrow:SetVertexColor(1, 0.82, 0)
+        btn.arrow = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        btn.arrow:SetPoint("LEFT", btn.label, "RIGHT", 3, 0)
+        btn.arrow:SetTextColor(1, 0.82, 0)
         btn.arrow:Hide()
 
         headerButtons[colDef.key] = btn
